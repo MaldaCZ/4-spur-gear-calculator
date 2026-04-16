@@ -5,7 +5,7 @@ import threading
 import os
 import sys
 
-# Pokus o import Pillow - pokud není nainstalovaný, bude fungovat bez loga
+# Try importing Pillow - app works without it (no schema image displayed)
 try:
     from PIL import Image, ImageTk
 
@@ -19,11 +19,11 @@ class InterpolaceOzubenychKol:
         self.Zo = 0
         self.Zp = 0
         self.m = 0.0
-        self.tolerance = 0.003
+        self.tolerance = 0.000003
 
     def _safe_acos_deg(self, value):
         if value > 1.0 + 1e-12 or value < -1.0 - 1e-12:
-            raise ValueError(f"Hodnota pro acos mimo interval [-1,1]: {value:.6f}")
+            raise ValueError(f"Value for acos out of range [-1,1]: {value:.6f}")
         v = max(-1.0, min(1.0, value))
         return math.degrees(math.acos(v))
 
@@ -42,7 +42,7 @@ class InterpolaceOzubenychKol:
         x1_sq = L1**2 - Rp**2
         x2_sq = L2**2 - Rp**2
         if x1_sq < 0 or x2_sq < 0:
-            raise ValueError("Negativní hodnota pod odmocninou")
+            raise ValueError("Negative value under square root")
         x1 = math.sqrt(x1_sq)
         x2 = math.sqrt(x2_sq)
         LC = x1 + x2
@@ -59,7 +59,7 @@ class InterpolaceOzubenychKol:
 
         sin_beta = (L1 / L2) * math.sin(alfa_rad)
         if abs(sin_beta) > 1.0:
-            raise ValueError(f"Hodnota pro arcsin mimo interval [-1,1]: {sin_beta:.6f}")
+            raise ValueError(f"Value for arcsin out of range [-1,1]: {sin_beta:.6f}")
 
         beta_rad = math.asin(sin_beta)
         beta_deg = math.degrees(beta_rad)
@@ -92,9 +92,9 @@ class InterpolaceOzubenychKol:
             "vysledek_deleni": vysledek_deleni,
             "je_dobre_reseni": je_dobre_reseni,
             "typ_reseni": (
-                "celé číslo"
+                "whole number"
                 if je_cele_cislo
-                else ("půlka" if je_pulka else "není řešení")
+                else ("half" if je_pulka else "no solution")
             ),
         }
 
@@ -127,12 +127,11 @@ class InterpolaceOzubenychKol:
 class OzubenaKolaGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Interpolační výpočet ozubených kol")
+        self.root.title("Spur Gear Interpolation Calculator")
         self.root.geometry("900x800")
         self.root.minsize(800, 700)
         self.root.configure(bg="#f0f0f0")
 
-        # Moderní barvy
         self.colors = {
             "primary": "#212F3C",
             "secondary": "#5DADE2",
@@ -146,7 +145,7 @@ class OzubenaKolaGUI:
 
         self.vypocet = InterpolaceOzubenychKol()
         self.nastav_styly()
-        self.nastav_ikonu()  # Nová metoda pro nastavení ikony
+        self.nastav_ikonu()
         self.vytvor_ui()
 
     def nastav_styly(self):
@@ -233,69 +232,31 @@ class OzubenaKolaGUI:
         )
 
     def nastav_ikonu(self):
-        """Nastaví ikonu aplikace pro okno a taskbar"""
         try:
-            # Cesty k ikonám
-            icon_ico_path = "icon.ico"
+            icon_ico_path = "icona.ico"
             icon_png_path = "icon.png"
 
-            # Pro EXE soubory - hledáme v dočasné složce PyInstaller
             if hasattr(sys, "_MEIPASS"):
-                icon_ico_path = os.path.join(sys._MEIPASS, "icon.ico")
+                icon_ico_path = os.path.join(sys._MEIPASS, "icona.ico")
                 icon_png_path = os.path.join(sys._MEIPASS, "icon.png")
 
-            # Preferujeme .ico soubory pro Windows
             if os.path.exists(icon_ico_path):
                 self.root.iconbitmap(icon_ico_path)
-                print(f"Použita ikona: {icon_ico_path}")
-            # Pokud .ico není, zkusíme .png s Pillow
             elif PILLOW_AVAILABLE and os.path.exists(icon_png_path):
-                # Načteme PNG jako PhotoImage
                 icon_image = Image.open(icon_png_path)
-                # Změníme velikost na standardní ikonu (32x32 nebo 64x64)
                 icon_image = icon_image.resize((32, 32), Image.Resampling.LANCZOS)
                 icon_photo = ImageTk.PhotoImage(icon_image)
                 self.root.iconphoto(True, icon_photo)
-                # Uložíme referenci
                 self.icon_image = icon_photo
-                print(f"Použita ikona: {icon_png_path}")
-            else:
-                print("Varování: Nebyla nalezena žádná ikona (icon.ico nebo icon.png).")
 
-        except Exception as e:
-            print(f"Nepodařilo se nastavit ikonu: {e}")
-
-    def nacti_logo(self, cesta_k_logu, max_height=60):
-        """Načte logo - pro EXE hledá v dočasné složce PyInstaller a zachová poměr stran"""
-        if not PILLOW_AVAILABLE:
-            return None
-
-        try:
-            # Pro EXE soubory - hledáme v dočasné složce PyInstaller
-            if hasattr(sys, "_MEIPASS"):
-                cesta_k_logu = os.path.join(sys._MEIPASS, cesta_k_logu)
-
-            if os.path.exists(cesta_k_logu):
-                image = Image.open(cesta_k_logu)
-                original_width, original_height = image.size
-
-                # Vypočítáme novou šířku pro zachování poměru stran
-                new_height = max_height
-                new_width = int(original_width * (new_height / original_height))
-
-                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                return ImageTk.PhotoImage(image)
-        except Exception as e:
-            print(f"Chyba při načítání loga: {e}")
-        return None
+        except Exception:
+            pass
 
     def nacti_schema_obrazek(self, cesta_k_obrazku, max_width=300, max_height=200):
-        """Načte schematický obrázek pro výsledky"""
         if not PILLOW_AVAILABLE:
             return None
 
         try:
-            # Pro EXE soubory - hledáme v dočasné složce PyInstaller
             if hasattr(sys, "_MEIPASS"):
                 cesta_k_obrazku = os.path.join(sys._MEIPASS, cesta_k_obrazku)
 
@@ -303,7 +264,6 @@ class OzubenaKolaGUI:
                 image = Image.open(cesta_k_obrazku)
                 original_width, original_height = image.size
 
-                # Vypočítáme nové rozměry pro zachování poměru stran
                 width_ratio = max_width / original_width
                 height_ratio = max_height / original_height
                 ratio = min(width_ratio, height_ratio)
@@ -313,75 +273,54 @@ class OzubenaKolaGUI:
 
                 image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 return ImageTk.PhotoImage(image)
-        except Exception as e:
-            print(f"Chyba při načítání schématu: {e}")
+        except Exception:
+            pass
         return None
 
     def vytvor_ui(self):
-        # Hlavní kontejner
         main_container = tk.Frame(self.root, bg=self.colors["background"])
         main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
-        # Header s logem a titulkem
+        # Header
         header_frame = tk.Frame(
             main_container, bg=self.colors["surface"], relief="flat", bd=0
         )
         header_frame.pack(fill=tk.X, pady=(0, 15))
 
-        # Pokus o načtení loga (UMÍSTĚNO ÚPLNĚ VPRAVO)
-        logo_image = self.nacti_logo("logo.png")
-        if logo_image:
-            logo_frame = tk.Frame(header_frame, bg=self.colors["surface"])
-            logo_frame.pack(side=tk.RIGHT, padx=(0, 15), pady=10)
-
-            logo_label = tk.Label(
-                logo_frame, image=logo_image, bg=self.colors["surface"]
-            )
-            logo_label.pack()
-            self.logo_image = logo_image
-
-        # Titulek
         title_frame = tk.Frame(header_frame, bg=self.colors["surface"])
-        title_frame.pack(
-            side=tk.LEFT,
-            fill=tk.X,
-            expand=True,
-            padx=(15, 15 if logo_image else 15),
-            pady=15,
-        )
+        title_frame.pack(fill=tk.X, expand=True, padx=15, pady=15)
 
         title_label = tk.Label(
             title_frame,
-            text="Interpolační výpočet ozubených kol pro konfiguraci BADH",
+            text="Spur Gear Interpolation Calculator",
             font=("Segoe UI", 14, "bold"),
             fg=self.colors["primary"],
             bg=self.colors["surface"],
         )
         title_label.pack(anchor=tk.W)
 
-        # Hlavní obsah
+        # Main content
         content_frame = tk.Frame(main_container, bg=self.colors["background"])
         content_frame.pack(fill=tk.BOTH, expand=True)
         content_frame.grid_columnconfigure(0, weight=0)
         content_frame.grid_columnconfigure(1, weight=1)
         content_frame.grid_rowconfigure(0, weight=1)
 
-        # Levý panel - vstupní parametry a ovládání
+        # Left panel
         left_panel = tk.Frame(content_frame, bg=self.colors["background"])
         left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
-        # Vstupní parametry v kartě
         input_card = ttk.Labelframe(
-            left_panel, text=" Vstupní parametry ", style="Card.TLabelframe"
+            left_panel, text=" Input Parameters ", style="Card.TLabelframe"
         )
         input_card.pack(fill=tk.X, pady=(0, 15), padx=5, ipady=5)
 
         params = [
-            ("Počet zubů velkého kola (Zo):", "zo_var", "80"),
-            ("Počet zubů pastorku (Zp):", "zp_var", "30"),
-            ("Modul (m):", "m_var", "2.0"),
-            ("Tolerance:", "tolerance_var", "0.003"),
-            ("Krok interpolace (°):", "krok_var", "0.001"),
+            ("Number of teeth – large gear (Zo):", "zo_var", "80"),
+            ("Number of teeth – pinion (Zp):", "zp_var", "30"),
+            ("Module (m):", "m_var", "2.0"),
+            ("Tolerance:", "tolerance_var", "0.000003"),
+            ("Interpolation step (°):", "krok_var", "0.00001"),
         ]
 
         for i, (label_text, var_name, default_val) in enumerate(params):
@@ -413,9 +352,9 @@ class OzubenaKolaGUI:
             )
             entry.pack(anchor=tk.W)
 
-        # Tlačítka
+        # Buttons
         button_card = ttk.Labelframe(
-            left_panel, text=" Ovládání ", style="Card.TLabelframe"
+            left_panel, text=" Controls ", style="Card.TLabelframe"
         )
         button_card.pack(fill=tk.X, pady=(0, 15), padx=5, ipady=5)
 
@@ -424,7 +363,7 @@ class OzubenaKolaGUI:
 
         self.vypocitat_btn = tk.Button(
             button_frame,
-            text="🚀 Spustit výpočet",
+            text="🚀 Run Calculation",
             command=self.spust_vypocet,
             font=("Segoe UI", 10, "bold"),
             bg=self.colors["primary"],
@@ -438,7 +377,7 @@ class OzubenaKolaGUI:
 
         self.vymazat_btn = tk.Button(
             button_frame,
-            text="🗑️ Vymazat výsledky",
+            text="🗑️ Clear Results",
             command=self.vymaz_vysledky,
             font=("Segoe UI", 10, "bold"),
             bg=self.colors["accent"],
@@ -452,7 +391,7 @@ class OzubenaKolaGUI:
 
         # Progress card
         progress_card = ttk.Labelframe(
-            left_panel, text=" Průběh ", style="Card.TLabelframe"
+            left_panel, text=" Progress ", style="Card.TLabelframe"
         )
         progress_card.pack(fill=tk.X, padx=5, ipady=5)
 
@@ -466,19 +405,19 @@ class OzubenaKolaGUI:
 
         self.progress_label = tk.Label(
             progress_frame,
-            text="Připraveno",
+            text="Ready",
             font=("Segoe UI", 9),
             fg=self.colors["text_light"],
             bg=self.colors["surface"],
         )
         self.progress_label.pack()
 
-        # Pravý panel - výsledky
+        # Right panel — results
         right_panel = tk.Frame(content_frame, bg=self.colors["background"])
         right_panel.grid(row=0, column=1, sticky="nsew")
 
         vysledky_card = ttk.Labelframe(
-            right_panel, text=" Výsledky ", style="Card.TLabelframe"
+            right_panel, text=" Results ", style="Card.TLabelframe"
         )
         vysledky_card.pack(fill=tk.BOTH, expand=True, padx=5, ipady=5)
 
@@ -499,7 +438,7 @@ class OzubenaKolaGUI:
         )
         self.vysledky_text.pack(fill=tk.BOTH, expand=True)
 
-        # Footer s autory
+        # Footer
         footer_frame = tk.Frame(self.root, bg=self.colors["primary"], height=40)
         footer_frame.pack(side=tk.BOTTOM, fill=tk.X)
         footer_frame.pack_propagate(False)
@@ -509,25 +448,12 @@ class OzubenaKolaGUI:
 
         author_label = tk.Label(
             footer_content,
-            text="Vypracoval: Malý Vratislav a Karel Vondráček",
+            text="Developed by: Malý Vratislav & Karel Vondráček",
             font=("Segoe UI", 10),
             fg="white",
             bg=self.colors["primary"],
         )
         author_label.pack()
-
-    def vloz_obrazek_do_textu(self):
-        """Vloží schematický obrázek do textového pole výsledků"""
-        schema_image = self.nacti_schema_obrazek(
-            "schema.png"
-        )  # nebo jiný název souboru
-        if schema_image:
-            # Uložíme referenci na obrázek, aby se nesmazal z paměti
-            self.schema_image = schema_image
-
-            # Vložíme obrázek do textového pole
-            self.vysledky_text.image_create(tk.END, image=schema_image)
-            self.vysledky_text.insert(tk.END, "\n\n\n")  # Více prostoru pod obrázkem
 
     def validuj_vstupy(self):
         try:
@@ -538,23 +464,18 @@ class OzubenaKolaGUI:
             krok = float(self.krok_var.get())
 
             if zo <= 0 or zp <= 0:
-                raise ValueError("Počty zubů musí být kladné")
+                raise ValueError("Tooth counts must be positive integers")
             if m <= 0:
-                raise ValueError("Modul musí být kladný")
+                raise ValueError("Module must be a positive number")
             if tolerance <= 0:
-                raise ValueError("Tolerance musí být kladná")
+                raise ValueError("Tolerance must be a positive number")
             if krok <= 0:
-                raise ValueError("Krok musí být kladný")
+                raise ValueError("Step must be a positive number")
 
             return zo, zp, m, tolerance, krok
         except ValueError as e:
-            messagebox.showerror("Chyba vstupu", f"Neplatný vstup: {e}")
+            messagebox.showerror("Input Error", f"Invalid input: {e}")
             return None
-
-    def update_progress(self, value):
-        self.progress["value"] = value
-        self.progress_label.config(text=f"Zpracováno: {value:.1f}%")
-        self.root.update_idletasks()
 
     def spust_vypocet(self):
         vstup = self.validuj_vstupy()
@@ -563,10 +484,22 @@ class OzubenaKolaGUI:
 
         zo, zp, m, tolerance, krok = vstup
 
+        # Disable both buttons while calculating
         self.vypocitat_btn.config(state="disabled")
+        self.vymazat_btn.config(state="disabled")
         self.progress["value"] = 0
-        self.progress_label.config(text="Spouštím výpočet...")
+        self.progress_label.config(text="Starting calculation...")
         self.vysledky_text.delete(1.0, tk.END)
+
+        # Load schema image on the main thread (PIL is not thread-safe)
+        schema_image = self.nacti_schema_obrazek("schema.png")
+
+        def _progress(value):
+            # root.after() is the only thread-safe way to update tkinter widgets
+            self.root.after(0, lambda v=value: (
+                self.progress.configure(value=v),
+                self.progress_label.config(text=f"Processed: {v:.1f}%"),
+            ))
 
         def vypocet_thread():
             try:
@@ -575,111 +508,71 @@ class OzubenaKolaGUI:
                 self.vypocet.m = m
                 self.vypocet.tolerance = tolerance
 
-                # Výpočet limitních úhlů
-                alfa_max, L1_max, L2_max, LC_max = (
-                    self.vypocet.vypocet_limitniho_uhlu_max()
-                )
-                alfa_min, L1_min, L2_min, LC_min = (
-                    self.vypocet.vypocet_limitniho_uhlu_min()
-                )
+                alfa_max, *_ = self.vypocet.vypocet_limitniho_uhlu_max()
+                alfa_min, *_ = self.vypocet.vypocet_limitniho_uhlu_min()
 
-                # HLAVIČKA S OBRÁZKEM
-                self.vysledky_text.insert(
-                    tk.END,
-                    "═══════════════════════════════════════════════════════════════\n",
-                )
-                self.vysledky_text.insert(
-                    tk.END, "           INTERPOLAČNÍ VÝPOČET OZUBENÝCH KOL\n"
-                )
-                self.vysledky_text.insert(tk.END, "           PRO KONFIGURACI BADH\n")
-                self.vysledky_text.insert(
-                    tk.END,
-                    "═══════════════════════════════════════════════════════════════\n\n",
-                )
-
-                self.vysledky_text.insert(tk.END, f"📊 VSTUPNÍ PARAMETRY:\n")
-                self.vysledky_text.insert(
-                    tk.END, f"    • Počet zubů velkého kola (Zo): {zo}\n"
-                )
-                self.vysledky_text.insert(
-                    tk.END, f"    • Počet zubů pastorku (Zp): {zp}\n"
-                )
-                self.vysledky_text.insert(tk.END, f"    • Modul (m): {m}\n")
-                self.vysledky_text.insert(tk.END, f"    • Tolerance: ±{tolerance}\n")
-                self.vysledky_text.insert(
-                    tk.END, f"    • Krok interpolace: {krok}°\n\n"
-                )
-
-                self.vysledky_text.insert(tk.END, f"🎯 INTERVAL PRO INTERPOLACI:\n")
-                self.vysledky_text.insert(tk.END, f"    • α_min = {alfa_min:.6f}°\n")
-                self.vysledky_text.insert(tk.END, f"    • α_max = {alfa_max:.6f}°\n\n")
-
-                # VLOŽENÍ SCHEMATICKÉHO OBRÁZKU - VYSVĚTLENÍ ÚHLŮ
-                self.vysledky_text.insert(tk.END, "📐 SCHÉMA GEOMETRIE:\n\n")
-                self.vloz_obrazek_do_textu()
-
-                self.vysledky_text.insert(
-                    tk.END, "⚙️  Probíhá interpolace, prosím čekejte...\n\n"
-                )
-                self.root.update_idletasks()
-
-                # Interpolace
                 dobra_reseni = self.vypocet.interpolace_v_intervalu(
-                    alfa_min, alfa_max, krok, self.update_progress
+                    alfa_min, alfa_max, krok, _progress
                 )
 
-                # Zobrazení výsledků
-                if not dobra_reseni:
-                    self.vysledky_text.insert(
-                        tk.END, "❌ VÝSLEDEK: Nebyla nalezena žádná dobrá řešení!\n"
-                    )
-                    self.vysledky_text.insert(
-                        tk.END, "    Zkuste změnit toleranci nebo parametry.\n"
-                    )
-                else:
-                    self.vysledky_text.insert(
-                        tk.END, f"✅ NALEZENO {len(dobra_reseni)} ŘEŠENÍ:\n"
-                    )
-                    self.vysledky_text.insert(
-                        tk.END,
-                        "───────────────────────────────────────────────────────────────\n\n",
-                    )
+                # All widget updates scheduled on the main thread
+                def _render():
+                    t = self.vysledky_text
+                    ins = lambda s: t.insert(tk.END, s)
 
-                    for i, r in enumerate(dobra_reseni, 1):
-                        self.vysledky_text.insert(tk.END, f"🔸 ŘEŠENÍ #{i}:\n")
-                        self.vysledky_text.insert(
-                            tk.END, f"    α = {r['alfa_deg']:.5f}°\n"
-                        )
-                        self.vysledky_text.insert(
-                            tk.END,
-                            f"    β = {r['beta_deg']:.3f}°, γ = {r['gamma_deg']:.3f}°, ε = {r['epsilon_deg']:.3f}°\n",
-                        )
-                        self.vysledky_text.insert(
-                            tk.END, f"    φ finální = {r['phi_final_deg']:.3f}°\n"
-                        )
-                        self.vysledky_text.insert(
-                            tk.END,
-                            f"    Dělení = {r['vysledek_deleni']:.6f} ({r['typ_reseni']})\n\n",
-                        )
+                    ins("═" * 63 + "\n")
+                    ins("           SPUR GEAR INTERPOLATION CALCULATION\n")
+                    ins("═" * 63 + "\n\n")
+                    ins("📊 INPUT PARAMETERS:\n")
+                    ins(f"    • Number of teeth – large gear (Zo): {zo}\n")
+                    ins(f"    • Number of teeth – pinion (Zp): {zp}\n")
+                    ins(f"    • Module (m): {m}\n")
+                    ins(f"    • Tolerance: ±{tolerance}\n")
+                    ins(f"    • Interpolation step: {krok}°\n\n")
+                    ins("🎯 INTERPOLATION INTERVAL:\n")
+                    ins(f"    • α_min = {alfa_min:.6f}°\n")
+                    ins(f"    • α_max = {alfa_max:.6f}°\n\n")
+                    ins("📐 GEOMETRY DIAGRAM:\n\n")
+                    if schema_image:
+                        self.schema_image = schema_image  # keep reference alive
+                        t.image_create(tk.END, image=schema_image)
+                        ins("\n\n\n")
+                    ins("\n")
+                    if not dobra_reseni:
+                        ins("❌ RESULT: No valid solutions found!\n")
+                        ins("    Try adjusting the tolerance or parameters.\n")
+                    else:
+                        ins(f"✅ FOUND {len(dobra_reseni)} SOLUTION(S):\n")
+                        ins("─" * 63 + "\n\n")
+                        for i, r in enumerate(dobra_reseni, 1):
+                            ins(f"🔸 SOLUTION #{i}:\n")
+                            ins(f"    α = {r['alfa_deg']:.5f}°\n")
+                            ins(f"    β = {r['beta_deg']:.3f}°,  γ = {r['gamma_deg']:.3f}°,  ε = {r['epsilon_deg']:.3f}°\n")
+                            ins(f"    φ final = {r['phi_final_deg']:.3f}°\n")
+                            ins(f"    Division = {r['vysledek_deleni']:.6f}  ({r['typ_reseni']})\n\n")
 
-                self.progress["value"] = 100
-                self.progress_label.config(text="Výpočet dokončen ✅")
+                    self.progress.configure(value=100)
+                    self.progress_label.config(text="Calculation complete ✅")
+                    self.vypocitat_btn.config(state="normal")
+                    self.vymazat_btn.config(state="normal")
+                    t.see("1.0")
+
+                self.root.after(0, _render)
 
             except Exception as e:
-                messagebox.showerror("Chyba výpočtu", f"Došlo k chybě: {e}")
-                self.progress_label.config(text="Chyba výpočtu ❌")
-            finally:
-                self.vypocitat_btn.config(state="normal")
+                def _error(err=e):
+                    messagebox.showerror("Calculation Error", f"An error occurred: {err}")
+                    self.progress_label.config(text="Calculation error ❌")
+                    self.vypocitat_btn.config(state="normal")
+                    self.vymazat_btn.config(state="normal")
+                self.root.after(0, _error)
 
-        # Spuštění výpočtu v separátním vlákně
-        thread = threading.Thread(target=vypocet_thread)
-        thread.daemon = True
-        thread.start()
+        threading.Thread(target=vypocet_thread, daemon=True).start()
 
     def vymaz_vysledky(self):
         self.vysledky_text.delete(1.0, tk.END)
-        self.progress["value"] = 0
-        self.progress_label.config(text="Připraveno")
+        self.progress.configure(value=0)
+        self.progress_label.config(text="Ready")
 
 
 if __name__ == "__main__":
