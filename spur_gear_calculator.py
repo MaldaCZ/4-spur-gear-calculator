@@ -233,11 +233,11 @@ class OzubenaKolaGUI:
 
     def nastav_ikonu(self):
         try:
-            icon_ico_path = "icona.ico"
+            icon_ico_path = "icon.ico"
             icon_png_path = "icon.png"
 
             if hasattr(sys, "_MEIPASS"):
-                icon_ico_path = os.path.join(sys._MEIPASS, "icona.ico")
+                icon_ico_path = os.path.join(sys._MEIPASS, "icon.ico")
                 icon_png_path = os.path.join(sys._MEIPASS, "icon.png")
 
             if os.path.exists(icon_ico_path):

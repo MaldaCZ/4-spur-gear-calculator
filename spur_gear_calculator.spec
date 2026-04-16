@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['ozubena_kola_gui.py'],
+    ['spur_gear_calculator.py'],
     pathex=[],
     binaries=[],
     datas=[('logo.png', '.'), ('schema.png', '.')],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='ozubena_kola_gui',
+    name='spur_gear_calculator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['icona.ico'],
+    icon=['icon.ico'],
 )
